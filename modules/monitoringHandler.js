@@ -7,6 +7,8 @@ const fs = require('fs').promises;
 const path = require('path');
 const broker = require('./brokerHandler');
 const journaling = require('./journalingHandler'); // Menggunakan nama alias 'journaling' agar lebih singkat
+const { getLogger } = require('./logger');
+const log = getLogger('Monitoring');
 
 // --- LOKASI DIREKTORI ---
 const PENDING_DIR = path.join(__dirname, '..', 'pending_orders');
@@ -20,7 +22,7 @@ const broadcast = (message) => {
     if (global.broadcastMessage) {
         global.broadcastMessage(message);
     } else {
-        console.warn('[MONITORING] Peringatan: fungsi broadcastMessage global tidak ditemukan.');
+        log.warn('[MONITORING] Peringatan: fungsi broadcastMessage global tidak ditemukan.');
     }
 };
 
@@ -30,7 +32,7 @@ const broadcast = (message) => {
  * - Cek posisi live yang sudah ditutup.
  */
 async function checkAllTrades() {
-    console.log(`[MONITORING] Memulai pengecekan...`);
+    log.info(`[MONITORING] Memulai pengecekan...`);
 
     try {
         // Ambil daftar posisi yang sedang aktif dari broker
@@ -48,7 +50,7 @@ async function checkAllTrades() {
 
             // Jika tiket pending order ada di daftar posisi aktif, berarti sudah tereksekusi
             if (activeTickets.includes(pendingData.ticket)) {
-                console.log(`[MONITORING] DETEKSI: Pending order #${pendingData.ticket} telah tereksekusi!`);
+                log.info(`[MONITORING] DETEKSI: Pending order #${pendingData.ticket} telah tereksekusi!`);
                 
                 // Pindahkan file dari folder 'pending_orders' ke 'live_positions'
                 // Pindahkan file dari folder 'pending_orders' ke 'live_positions'
@@ -75,7 +77,7 @@ broadcast(`✅ *Order Terekseskusi:* Pending order untuk ${pendingData.symbol} (
 
             // Jika tiket posisi yang tersimpan di lokal TIDAK ADA di daftar posisi aktif, berarti sudah ditutup
             if (!activeTickets.includes(positionData.ticket)) {
-                console.log(`[MONITORING] DETEKSI: Posisi #${positionData.ticket} (${positionData.symbol}) telah ditutup.`);
+                log.info(`[MONITORING] DETEKSI: Posisi #${positionData.ticket} (${positionData.symbol}) telah ditutup.`);
 
                 // Panggil fungsi BARU dari brokerHandler yang sudah diperbaiki
                 const closingDeal = await broker.getClosingDealInfo(positionData.ticket);
@@ -105,7 +107,7 @@ broadcast(`✅ *Order Terekseskusi:* Pending order untuk ${pendingData.symbol} (
 
                 } else {
                     // KASUS 2: GAGAL! Detail penutupan TIDAK ditemukan.
-                    console.warn(`[MONITORING] PERINGATAN: Tidak dapat menemukan detail closing deal untuk #${positionData.ticket}. Mengirim notifikasi darurat.`);
+                    log.warn(`[MONITORING] PERINGATAN: Tidak dapat menemukan detail closing deal untuk #${positionData.ticket}. Mengirim notifikasi darurat.`);
                     
                     // Kirim notifikasi darurat ke pengguna
                     const fallbackMessage = `⚠️ *NOTIFIKASI MANUAL:* Posisi #${positionData.ticket} (${positionData.symbol}) telah ditutup, namun detail profit/loss tidak dapat diambil secara otomatis. Silakan cek terminal Anda.`;
@@ -122,9 +124,9 @@ broadcast(`✅ *Order Terekseskusi:* Pending order untuk ${pendingData.symbol} (
         // ===================================================================================
 
     } catch (mainError) {
-        console.error('[MONITORING] Terjadi error besar di dalam loop monitoring:', mainError);
+        log.error('[MONITORING] Terjadi error besar di dalam loop monitoring:', mainError);
     }
-    console.log(`[MONITORING] Pengecekan selesai.`);
+    log.info(`[MONITORING] Pengecekan selesai.`);
 }
 
 module.exports = {

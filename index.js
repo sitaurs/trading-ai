@@ -8,6 +8,8 @@ require('dotenv').config();
 const fs = require('fs/promises');
 const path = require('path');
 const cron = require('node-cron');
+const { getLogger } = require('./modules/logger');
+const log = getLogger('Main');
 
 // Impor modul yang sudah ada
 const { startWhatsAppClient } = require('./modules/whatsappClient');
@@ -38,7 +40,7 @@ async function loadRecipients() {
         const data = await fs.readFile(RECIPIENTS_FILE, 'utf8');
         return JSON.parse(data);
     } catch (error) {
-        console.warn("Warning: File config/recipients.json tidak ditemukan. Membuat file baru...");
+        log.warn("Warning: File config/recipients.json tidak ditemukan. Membuat file baru...");
         await writeJsonFile(RECIPIENTS_FILE, []);
         return [];
     }
@@ -64,10 +66,10 @@ async function writeJsonFile(filePath, data) {
 global.broadcastMessage = (messageText) => {
     // Pastikan socket dan daftar penerima sudah siap
     if (whatsappSocket && global.botSettings && global.botSettings.recipients) {
-        console.log(`[BROADCAST] Mengirim pesan: "${messageText}"`);
+        log.info(`[BROADCAST] Mengirim pesan: "${messageText}"`);
         for (const id of global.botSettings.recipients) {
             whatsappSocket.sendMessage(id, { text: messageText }).catch(err => {
-                console.error(`Gagal kirim pesan broadcast ke ${id}:`, err);
+                log.error(`Gagal kirim pesan broadcast ke ${id}:`, err);
             });
         }
     }
@@ -77,13 +79,13 @@ global.broadcastMessage = (messageText) => {
  * Fungsi utama aplikasi
  */
 async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
-    console.log('Memulai bot...');
+    log.info('Memulai bot...');
     global.botSettings = {
         isNewsEnabled: process.env.ENABLE_NEWS_SEARCH === 'true',
         recipients: await loadRecipients()
     };
-    console.log('Pengaturan awal dimuat:', { isNewsEnabled: global.botSettings.isNewsEnabled });
-    console.log('Penerima notifikasi dimuat:', global.botSettings.recipients);
+    log.info('Pengaturan awal dimuat:', { isNewsEnabled: global.botSettings.isNewsEnabled });
+    log.info('Penerima notifikasi dimuat:', global.botSettings.recipients);
 
     whatsappSocket = await startWhatsAppClient();
 
@@ -91,7 +93,7 @@ async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
     const intervalMinutes = process.env.MONITORING_INTERVAL_MINUTES || 2;
     const intervalMs = intervalMinutes * 60 * 1000;
 
-    console.log(`🤖 Bot siap. Siklus monitoring akan berjalan setiap ${intervalMinutes} menit.`);
+    log.info(`🤖 Bot siap. Siklus monitoring akan berjalan setiap ${intervalMinutes} menit.`);
     
     setTimeout(() => {
         monitoringHandler.checkAllTrades();
@@ -114,7 +116,7 @@ async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
         const command = text.split(' ')[0].toLowerCase();
         
         try {
-            console.log(`Menerima perintah: "${text}" dari ${chatId}`);
+            log.info(`Menerima perintah: "${text}" dari ${chatId}`);
             
             // PERBAIKAN: Blok switch yang sudah di-upgrade
             switch (command) {
@@ -191,7 +193,7 @@ async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
                     break; 
             }
         } catch (error) {
-            console.error(`Error saat memproses perintah "${text}":`, error);
+            log.error(`Error saat memproses perintah "${text}":`, error);
             await whatsappSocket.sendMessage(chatId, { text: `Terjadi kesalahan internal: ${error.message}` });
         }
     });
@@ -204,23 +206,23 @@ async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
             const status = JSON.parse(statusData);
 
             if (status.isPaused) {
-                console.log("[CRON] Analisis terjadwal dilewati karena bot dalam mode jeda (paused).");
+                log.info("[CRON] Analisis terjadwal dilewati karena bot dalam mode jeda (paused).");
                 return;
             }
 
             if (global.botSettings.recipients && global.botSettings.recipients.length > 0) {
-                console.log("[CRON] --- Menjalankan Analisis Terjadwal Otomatis ---");
+                log.info("[CRON] --- Menjalankan Analisis Terjadwal Otomatis ---");
                 await analysisHandler.runScheduledAnalysis(SUPPORTED_PAIRS, global.botSettings, whatsappSocket, global.botSettings.recipients);
             } else {
-                console.log("[CRON] --- Analisis Terjadwal dilewati, tidak ada penerima notifikasi ---");
+                log.info("[CRON] --- Analisis Terjadwal dilewati, tidak ada penerima notifikasi ---");
             }
         } catch (error) {
             // Jika file bot_status.json belum ada, anggap saja tidak dijeda
             if (error.code === 'ENOENT') {
-                 console.log("[CRON] --- Menjalankan Analisis Terjadwal Otomatis (file status tidak ditemukan) ---");
+                 log.info("[CRON] --- Menjalankan Analisis Terjadwal Otomatis (file status tidak ditemukan) ---");
                  await analysisHandler.runScheduledAnalysis(SUPPORTED_PAIRS, global.botSettings, whatsappSocket, global.botSettings.recipients);
             } else {
-                console.error("[CRON] Error saat menjalankan analisis terjadwal:", error);
+                log.error("[CRON] Error saat menjalankan analisis terjadwal:", error);
             }
         }
     });
@@ -229,6 +231,6 @@ async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
 
 // Panggil fungsi main untuk memulai bot
 main().catch(error => {
-    console.error('Gagal total saat memulai bot:', error);
+    log.error('Gagal total saat memulai bot:', error);
     process.exit(1);
 });

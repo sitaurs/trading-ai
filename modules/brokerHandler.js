@@ -4,6 +4,8 @@
  */
 
 const axios = require('axios');
+const { getLogger } = require('./logger');
+const log = getLogger('BrokerHandler');
 
 // Mengambil konfigurasi dari environment variables
 const API_BASE_URL = process.env.BROKER_API_BASE_URL;
@@ -11,7 +13,7 @@ const API_KEY = process.env.BROKER_API_KEY;
 
 // Validasi awal saat bot dijalankan
 if (!API_BASE_URL || !API_KEY) {
-  console.error("KESALAHAN FATAL: BROKER_API_BASE_URL dan BROKER_API_KEY harus ada di file .env");
+  log.error('KESALAHAN FATAL: BROKER_API_BASE_URL dan BROKER_API_KEY harus ada di file .env');
   process.exit(1);
 }
 
@@ -31,10 +33,10 @@ const apiClient = axios.create({
  */
 function validateApiResponse(responseData) {
     if (responseData && typeof responseData === 'object' && responseData.message && responseData.result) {
-        console.log(`[BROKER HANDLER] Sukses! Pesan dari API: "${responseData.message}"`);
+        log.info(`[BROKER HANDLER] Sukses! Pesan dari API: "${responseData.message}"`);
         return responseData.result;
     }
-    console.error('[BROKER HANDLER] Respons dari API tidak valid atau kosong:', responseData);
+    log.error('[BROKER HANDLER] Respons dari API tidak valid atau kosong:', responseData);
     return null;
 }
 
@@ -43,7 +45,7 @@ function validateApiResponse(responseData) {
  */
 async function openOrder(orderData) {
   try {
-    console.log('[BROKER HANDLER] Mengirim permintaan Buka Order ke API:', orderData);
+    log.info('[BROKER HANDLER] Mengirim permintaan Buka Order ke API:', orderData);
     const response = await apiClient.post('/order', orderData);
     const result = validateApiResponse(response.data);
     if (!result) {
@@ -52,7 +54,7 @@ async function openOrder(orderData) {
     return result;
   } catch (error) {
     const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-    console.error(`[BROKER HANDLER] Gagal saat membuka order: ${errorMessage}`);
+    log.error(`[BROKER HANDLER] Gagal saat membuka order: ${errorMessage}`);
     throw new Error(`Gagal membuka order: ${errorMessage}`);
   }
 }
@@ -66,11 +68,11 @@ async function getActivePositions() {
     if (Array.isArray(response.data)) {
         return response.data;
     }
-    console.warn('[BROKER HANDLER] /get_positions tidak mengembalikan array, mengasumsikan tidak ada posisi aktif.');
+    log.warn('[BROKER HANDLER] /get_positions tidak mengembalikan array, mengasumsikan tidak ada posisi aktif.');
     return [];
   } catch (error) {
     const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-    console.error(`[BROKER HANDLER] Gagal mengambil posisi aktif: ${errorMessage}`);
+    log.error(`[BROKER HANDLER] Gagal mengambil posisi aktif: ${errorMessage}`);
     return [];
   }
 }
@@ -80,7 +82,7 @@ async function getActivePositions() {
  */
 async function cancelPendingOrder(ticket) {
   try {
-    console.log(`[BROKER HANDLER] Mengirim permintaan Batalkan Order untuk tiket #${ticket}`);
+    log.info(`[BROKER HANDLER] Mengirim permintaan Batalkan Order untuk tiket #${ticket}`);
     const response = await apiClient.post('/order/cancel', { ticket });
     const result = validateApiResponse(response.data);
     if (!result) {
@@ -89,7 +91,7 @@ async function cancelPendingOrder(ticket) {
     return result;
   } catch (error) {
     const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-    console.error(`[BROKER HANDLER] Gagal membatalkan order #${ticket}: ${errorMessage}`);
+    log.error(`[BROKER HANDLER] Gagal membatalkan order #${ticket}: ${errorMessage}`);
     throw new Error(`Gagal membatalkan order #${ticket}: ${errorMessage}`);
   }
 }
@@ -99,7 +101,7 @@ async function cancelPendingOrder(ticket) {
  */
 async function closePosition(ticket) {
   try {
-    console.log(`[BROKER HANDLER] Mengirim permintaan Tutup Posisi untuk tiket #${ticket}`);
+    log.info(`[BROKER HANDLER] Mengirim permintaan Tutup Posisi untuk tiket #${ticket}`);
     const response = await apiClient.post('/position/close_by_ticket', { ticket });
     const result = validateApiResponse(response.data);
     if (!result) {
@@ -108,7 +110,7 @@ async function closePosition(ticket) {
     return result;
   } catch (error) {
     const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-    console.error(`[BROKER HANDLER] Gagal menutup posisi #${ticket}: ${errorMessage}`);
+    log.error(`[BROKER HANDLER] Gagal menutup posisi #${ticket}: ${errorMessage}`);
     throw new Error(`Gagal menutup posisi #${ticket}: ${errorMessage}`);
   }
 }
@@ -122,7 +124,7 @@ async function closePosition(ticket) {
 async function modifyPosition(ticket, sl = 0.0, tp = 0.0) {
   try {
     const payload = { position: ticket, sl, tp };
-    console.log(`[BROKER HANDLER] Mengirim permintaan Modifikasi Posisi untuk tiket #${ticket}:`, payload);
+    log.info(`[BROKER HANDLER] Mengirim permintaan Modifikasi Posisi untuk tiket #${ticket}:`, payload);
     const response = await apiClient.post('/modify_sl_tp', payload);
 
     const result = validateApiResponse(response.data);
@@ -132,7 +134,7 @@ async function modifyPosition(ticket, sl = 0.0, tp = 0.0) {
     return result;
   } catch (error) {
     const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-    console.error(`[BROKER HANDLER] Gagal memodifikasi posisi #${ticket}: ${errorMessage}`);
+    log.error(`[BROKER HANDLER] Gagal memodifikasi posisi #${ticket}: ${errorMessage}`);
     throw new Error(`Gagal memodifikasi posisi #${ticket}: ${errorMessage}`);
   }
 }
@@ -145,11 +147,11 @@ async function modifyPosition(ticket, sl = 0.0, tp = 0.0) {
  */
 async function getClosingDealInfo(positionId) {
   if (!positionId) {
-      console.error('[BROKER HANDLER] Tidak bisa mencari info deal, positionId tidak disediakan.');
+      log.error('[BROKER HANDLER] Tidak bisa mencari info deal, positionId tidak disediakan.');
       return null;
   }
 
-  console.log(`[BROKER HANDLER] Mencari history deals yang SESUAI untuk Position ID: ${positionId}`);
+  log.info(`[BROKER HANDLER] Mencari history deals yang SESUAI untuk Position ID: ${positionId}`);
 
   try {
       const toDate = new Date();
@@ -159,23 +161,23 @@ async function getClosingDealInfo(positionId) {
       const allDeals = response.data;
 
       if (!allDeals || !Array.isArray(allDeals) || allDeals.length === 0) {
-          console.log(`[BROKER HANDLER] Tidak ada history deals yang ditemukan dalam 48 jam terakhir.`);
+          log.info(`[BROKER HANDLER] Tidak ada history deals yang ditemukan dalam 48 jam terakhir.`);
           return null;
       }
       
       const closingDeal = allDeals.find(deal => deal.position_id === positionId && deal.entry === 1);
 
       if (closingDeal) {
-          console.log(`[BROKER HANDLER] SUKSES! Closing deal yang valid ditemukan untuk position ${positionId}:`, closingDeal);
+          log.info(`[BROKER HANDLER] SUKSES! Closing deal yang valid ditemukan untuk position ${positionId}:`, closingDeal);
           return closingDeal;
       } else {
-          console.warn(`[BROKER HANDLER] PERINGATAN: Tidak ada closing deal yang cocok untuk Position ID ${positionId} di riwayat terbaru.`);
+          log.warn(`[BROKER HANDLER] PERINGATAN: Tidak ada closing deal yang cocok untuk Position ID ${positionId} di riwayat terbaru.`);
           return null;
       }
 
   } catch (error) {
       const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-      console.error(`[BROKER HANDLER] Gagal mengambil history deals untuk position ${positionId}: ${errorMessage}`);
+      log.error(`[BROKER HANDLER] Gagal mengambil history deals untuk position ${positionId}: ${errorMessage}`);
       return null;
   }
 }
@@ -184,7 +186,7 @@ async function getClosingDealInfo(positionId) {
 * [GET /history_deals_get] Mengambil semua deal hari ini dan menghitung total profit.
 */
 async function getTodaysProfit() {
-  console.log(`[BROKER HANDLER] Menghitung profit hari ini...`);
+  log.info(`[BROKER HANDLER] Menghitung profit hari ini...`);
   const toDate = new Date();
   const fromDate = new Date();
   fromDate.setHours(0, 0, 0, 0);
@@ -198,7 +200,7 @@ async function getTodaysProfit() {
       return totalProfit;
   } catch (error) {
       const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-      console.error(`[BROKER HANDLER] Gagal mengambil profit hari ini: ${errorMessage}`);
+      log.error(`[BROKER HANDLER] Gagal mengambil profit hari ini: ${errorMessage}`);
       return 0;
   }
 }
