@@ -125,6 +125,7 @@ Perintah hanya dikenali jika dikirim oleh ID yang terdaftar pada `NOTIFICATION_R
 - Bot menyimpan sesi login WhatsApp pada folder `whatsapp-session/`. Jika ingin mengganti akun, hapus folder tersebut sebelum menjalankan ulang.
 - Direktori `pending_orders/`, `live_positions/`, dan `journal_data/` akan dibuat otomatis bila belum ada.
 - Jaga keamanan file `.env` dan `config/google-credentials.json` karena berisi data sensitif.
+- Apabila koneksi WhatsApp terputus (misalnya muncul kode 515), bot akan mencoba menyambung kembali secara otomatis. Pastikan folder `whatsapp-session/` tidak terhapus agar proses ini berhasil.
 
 ## Lisensi
 

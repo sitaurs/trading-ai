@@ -22,7 +22,7 @@ if (!fs.existsSync(SESSION_DIR)) {
  * Fungsi utama untuk memulai dan mengelola koneksi WhatsApp.
  * @returns {Promise<object>} Instance socket Baileys yang aktif.
  */
-async function startWhatsAppClient() {
+async function startWhatsAppClient(onSocketUpdate) {
     // Menggunakan MultiFileAuthState untuk menyimpan kredensial login
     const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
     const { version, isLatest } = await fetchLatestBaileysVersion();
@@ -36,24 +36,37 @@ async function startWhatsAppClient() {
         browser: ['Trading', 'Chrome', '1.0.0'], // Nama yang akan muncul di "Perangkat Tertaut"
     });
 
+    // Informasikan socket baru ke pemanggil
+    if (typeof onSocketUpdate === 'function') {
+        onSocketUpdate(sock);
+    }
+
     // Listener untuk menangani update koneksi (QR code, terhubung, terputus, dll.)
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (connection === 'close') {
             const error = new Boom(lastDisconnect?.error)?.output?.statusCode;
-            
+
             log.error('Koneksi terputus karena:', lastDisconnect?.error);
 
             // Jika error bukan karena logout manual, maka coba sambungkan kembali.
             if (error !== DisconnectReason.loggedOut) {
                 log.info('Mencoba menyambungkan kembali...');
-                startWhatsAppClient();
+                setTimeout(async () => {
+                    const newSock = await startWhatsAppClient(onSocketUpdate);
+                    if (typeof onSocketUpdate === 'function') {
+                        onSocketUpdate(newSock);
+                    }
+                }, 1000);
             } else {
                 log.info('Koneksi ditutup permanen (Logged Out). Hapus folder "whatsapp-session" untuk memulai sesi baru.');
             }
         } else if (connection === 'open') {
             log.info('✅ Koneksi WhatsApp berhasil! Bot siap menerima perintah.');
+            if (typeof onSocketUpdate === 'function') {
+                onSocketUpdate(sock);
+            }
         }
 
         // Jika ada QR code baru, tampilkan di terminal (sudah di-handle oleh printQRInTerminal=true)
