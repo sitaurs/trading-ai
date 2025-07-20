@@ -157,21 +157,22 @@ async function getClosingDealInfo(positionId) {
       const toDate = new Date();
       const fromDate = new Date(toDate.getTime() - 48 * 60 * 60 * 1000); // 48 jam yang lalu
 
-      const response = await apiClient.get(`/history_deals_get?from_date=${fromDate.toISOString()}&to_date=${toDate.toISOString()}`);
-      const allDeals = response.data;
+      const url = `/history_deals_get?from_date=${fromDate.toISOString()}&to_date=${toDate.toISOString()}&position=${positionId}`;
+      const response = await apiClient.get(url);
+      const deals = response.data;
 
-      if (!allDeals || !Array.isArray(allDeals) || allDeals.length === 0) {
-          log.info(`[BROKER HANDLER] Tidak ada history deals yang ditemukan dalam 48 jam terakhir.`);
+      if (!deals || !Array.isArray(deals) || deals.length === 0) {
+          log.info(`[BROKER HANDLER] Tidak ada history deals untuk posisi ${positionId}.`);
           return null;
       }
-      
-      const closingDeal = allDeals.find(deal => deal.position_id === positionId && deal.entry === 1);
+
+      const closingDeal = deals.find(deal => deal.entry === 1);
 
       if (closingDeal) {
           log.info(`[BROKER HANDLER] SUKSES! Closing deal yang valid ditemukan untuk position ${positionId}:`, closingDeal);
           return closingDeal;
       } else {
-          log.warn(`[BROKER HANDLER] PERINGATAN: Tidak ada closing deal yang cocok untuk Position ID ${positionId} di riwayat terbaru.`);
+          log.warn(`[BROKER HANDLER] PERINGATAN: Tidak ada closing deal yang cocok untuk Position ID ${positionId}.`);
           return null;
       }
 
