@@ -1,0 +1,15 @@
+# Dependensi dan Log
+/node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# File Environment Rahasia
+.env
+
+# File Sesi WhatsApp (sangat penting untuk diabaikan)
+/whatsapp-session/
+
+# File Sistem Operasi
+.DS_Store
+Thumbs.db

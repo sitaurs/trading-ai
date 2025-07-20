@@ -1,0 +1,10 @@
+{
+  "symbol": "AUDUSD",
+  "type": "ORDER_TYPE_SELL_LIMIT",
+  "price": 0.6478,
+  "sl": 0.6498,
+  "tp": 0.6438,
+  "volume": 0.02,
+  "comment": "BotV7 | AUDUSD",
+  "ticket": 858466159
+}

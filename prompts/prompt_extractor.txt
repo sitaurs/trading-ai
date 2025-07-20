@@ -1,0 +1,36 @@
+TUGAS ANDA: Anda adalah sebuah parser cerdas. Baca teks analisis trading di bawah ini dan ekstrak informasi kunci ke dalam format KEY: VALUE. JANGAN berikan penjelasan, komentar, atau karakter tambahan. Hanya berikan output sesuai format yang diminta.
+- lihat jika hara saat ini beda dengan harga masuk berarti itu adalah order limit bisa buy limit dan sell limit
+- jika hasil teksanalisis adalah moe sl tp itu sama aja dengan hold
+- "pair" hanya boleh diisi [{PAIRS_LIST}]
+- "arah" hanya boleh diisi [ORDER_TYPE_SELL_STOP|ORDER_TYPE_SELL_LIMIT|ORDER_TYPE_BUY_STOP|ORDER_TYPE_BUY_LIMIT|ORDER_TYPE_SELL|ORDER_TYPE_BUY]
+- "keputusan" hanya boleh diisi [OPEN|NO_TRADE|CLOSE_MANUAL|HOLD]
+
+TEKS ANALISIS UNTUK DIPROSES:
+"""
+{NARRATIVE_TEXT}
+"""
+
+FORMAT OUTPUT YANG DIINGINKAN (Pilih salah satu blok sesuai keputusan dalam teks):
+
+## JIKA KEPUTUSAN ADALAH OPEN ##
+keputusan: OPEN
+pair: [Isi dengan pair dari teks]
+arah: [Isi dengan arah dari teks]
+harga: [Isi dengan Entry Price dari teks]
+sl: [Isi dengan Stop Loss dari teks]
+tp: [Isi dengan Take Profit dari teks]
+
+## JIKA KEPUTUSAN ADALAH NO_TRADE ##
+keputusan: NO_TRADE
+alasan: [Isi dengan alasan kenapa tidak ada trade]
+pair: [Isi dengan pair dari teks]
+
+## JIKA KEPUTUSAN ADALAH CLOSE_MANUAL ##
+keputusan: CLOSE_MANUAL
+alasan: [Isi dengan alasan kenapa harus ditutup]
+pair: [Isi dengan pair dari teks]
+
+## JIKA KEPUTUSAN ADALAH HOLD ##
+keputusan: HOLD
+alasan: [Isi dengan alasan kenapa harus di-hold]
+pair: [Isi dengan pair dari teks]

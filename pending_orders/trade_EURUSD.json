@@ -1,0 +1,10 @@
+{
+  "symbol": "EURUSD",
+  "type": "ORDER_TYPE_SELL_LIMIT",
+  "price": 1.16,
+  "sl": 1.1614,
+  "tp": 1.156,
+  "volume": 0.02,
+  "comment": "BotV7 | EURUSD",
+  "ticket": 861115206
+}

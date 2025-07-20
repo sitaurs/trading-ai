@@ -1,0 +1,32 @@
+{
+  "name": "trading-analysis-bot",
+  "version": "1.0.0",
+  "description": "Bot analisis trading otomatis menggunakan Node.js dan WhatsApp.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "trading",
+    "bot",
+    "whatsapp",
+    "nodejs",
+    "baileys",
+    "gemini"
+  ],
+  "author": "NandaC",
+  "license": "ISC",
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.5",
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+	"chalk": "^4.1.2",
+    "google-auth-library": "^9.11.0",
+    "google-spreadsheet": "^4.1.2",
+    "node-cron": "^3.0.3",
+    "qrcode-terminal": "^0.12.0",
+    "sharp": "^0.32.6"
+  }
+}
