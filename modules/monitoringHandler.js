@@ -87,16 +87,21 @@ broadcast(`✅ *Order Terekseskusi:* Pending order untuk ${pendingData.symbol} (
                     // KASUS 1: SUKSES! Detail penutupan ditemukan.
                     const profit = closingDeal.profit;
                     const reasonCode = closingDeal.reason;
-                    let closeReasonText = 'Ditutup Manual';
+                    let closeReasonText = 'Manual Close';
                     let notificationMessage = '';
 
-                    // Reason 5 = Take Profit, Reason 4 = Stop Loss (sesuaikan jika berbeda di broker Anda)
                     if (reasonCode === 5) {
                         closeReasonText = 'Take Profit Hit';
                         notificationMessage = `✅ *TP HIT:* Posisi ${positionData.symbol} (#${positionData.ticket}) mencapai Take Profit.\nProfit: ${profit.toFixed(2)}`;
                     } else if (reasonCode === 4) {
                         closeReasonText = 'Stop Loss Hit';
                         notificationMessage = `🛑 *SL HIT:* Posisi ${positionData.symbol} (#${positionData.ticket}) menyentuh Stop Loss.\nProfit: ${profit.toFixed(2)}`;
+                    } else if (reasonCode === 1) {
+                        closeReasonText = 'Closed by User';
+                        notificationMessage = `ℹ️ *DITUTUP MANUAL:* Posisi ${positionData.symbol} (#${positionData.ticket}) ditutup manual.\nProfit/Loss: ${profit.toFixed(2)}`;
+                    } else if (reasonCode === 3) {
+                        closeReasonText = 'Closed by Program';
+                        notificationMessage = `ℹ️ *DITUTUP PROGRAM:* Posisi ${positionData.symbol} (#${positionData.ticket}) ditutup oleh program lain.\nProfit/Loss: ${profit.toFixed(2)}`;
                     } else {
                         notificationMessage = `ℹ️ *POSISI DITUTUP:* Posisi ${positionData.symbol} (#${positionData.ticket}) telah ditutup.\nProfit/Loss: ${profit.toFixed(2)}`;
                     }
