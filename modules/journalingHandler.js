@@ -14,6 +14,8 @@ const log = getLogger('Journaling');
 // --- MODUL INTERNAL ---
 // PERBAIKAN: Menambahkan impor yang hilang untuk circuitBreaker
 const circuitBreaker = require('./circuitBreaker');
+// Fallback untuk mengambil informasi deal jika data profit tidak tersedia
+const broker = require('./brokerHandler');
 
 // --- KONFIGURASI ---
 const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID;
@@ -35,8 +37,15 @@ async function recordTrade(closedTradeData, closeReason, finalBrokerData = {}) {
 
     const { ticket, symbol, type, sl, tp, volume } = closedTradeData;
     const entryPrice = closedTradeData.price || closedTradeData.open_price || 'N/A';
-    // PERBAIKAN: Memastikan 'profit' diambil dengan aman
-    const profit = (finalBrokerData && finalBrokerData.profit !== undefined) ? finalBrokerData.profit : 'N/A';
+    let profit = (finalBrokerData && finalBrokerData.profit !== undefined) ? finalBrokerData.profit : undefined;
+
+    if (profit === undefined) {
+        const dealInfo = await broker.getClosingDealInfo(ticket);
+        if (dealInfo && dealInfo.profit !== undefined) {
+            profit = dealInfo.profit;
+        }
+    }
+    if (profit === undefined) profit = 'N/A';
 
     log.info(`[JOURNALING] Memulai proses pencatatan untuk tiket #${ticket}...`);
 
