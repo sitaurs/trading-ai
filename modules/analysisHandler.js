@@ -17,6 +17,8 @@ const chalk = require('chalk'); // Untuk log yang lebih keren!
 const broker = require('./brokerHandler');
 const journalingHandler = require('./journalingHandler');
 const circuitBreaker = require('./circuitBreaker');
+const { isWithinSession, classifySegment } = require('../src/utils/session');
+const { passesHardFilter } = require('../src/utils/hardFilter');
 
 // --- KONFIGURASI & VARIABEL GLOBAL ---
 const PENDING_DIR = path.join(__dirname, '..', 'pending_orders');
@@ -278,7 +280,7 @@ async function extractTradeDataFromAI(narrativeText) {
  * @param {object} orderData - Data order lengkap, termasuk `ticket` dari broker.
  * @param {string} initialAnalysisText - Teks analisis awal untuk disimpan ke jurnal.
  */
-async function saveOrderData(orderData, initialAnalysisText) {
+async function saveOrderData(orderData, initialAnalysisText, meta = {}) {
     const {
         ticket,
         symbol
@@ -293,7 +295,7 @@ async function saveOrderData(orderData, initialAnalysisText) {
 
     try {
         // Simpan data order (pending atau live)
-        await writeJsonFile(orderFilePath, orderData);
+        await writeJsonFile(orderFilePath, { ...orderData, meta });
 
         // Baca data jurnal yang ada atau buat objek baru
         let journalData = await readJsonFile(journalFilePath) || {};
@@ -324,8 +326,26 @@ async function handleAnalysisRequest(pair, dxyAnalysisText, botSettings, whatsap
         if (whatsappSocket && recipientIds) {
             await broadcastMessage(whatsappSocket, recipientIds, { text: message });
         }
-        return; 
+        return;
     }
+
+    if (!isWithinSession()) {
+        log('INFO', `[${pair}] outside_session`);
+        return;
+    }
+
+    const hf = await passesHardFilter(pair);
+    if (!hf.pass) {
+        log('INFO', `[${pair}] hard_filter_fail reason=${hf.reason} atr=${hf.atr} range=${hf.range} body=${hf.body}`);
+        return;
+    }
+    log('INFO', `[${pair}] hard_filter_pass wickAtr=${hf.wickAtrRatio}`);
+    const analysisMeta = {
+        session_segment: classifySegment(),
+        wick_atr_ratio: hf.wickAtrRatio,
+        hard_filter_pass: true,
+        hard_filter_reason: null
+    };
     log('INFO', `===== MEMULAI SIKLUS ANALISIS UNTUK ${pair} =====`);
     await broadcastMessage(whatsappSocket, recipientIds, {
         text: `⏳ *Analisis Dimulai untuk ${pair}...*`
@@ -441,7 +461,7 @@ async function handleAnalysisRequest(pair, dxyAnalysisText, botSettings, whatsap
         log('INFO', `Keputusan AI yang diekstrak: ${extractedData.keputusan}`);
         switch (extractedData.keputusan) {
             case 'OPEN':
-                await handleOpenDecision(extractedData, narrativeAnalysisResult, whatsappSocket, recipientIds);
+                await handleOpenDecision(extractedData, narrativeAnalysisResult, whatsappSocket, recipientIds, analysisMeta);
                 break;
             case 'CLOSE_MANUAL':
                 await handleCloseDecision(extractedData, activeTrade, whatsappSocket, recipientIds);
@@ -478,7 +498,7 @@ async function handleAnalysisRequest(pair, dxyAnalysisText, botSettings, whatsap
  * @param {object} whatsappSocket - Instance koneksi WhatsApp.
  * @param {string[]} recipientIds - Array ID penerima pesan.
  */
-async function handleOpenDecision(extractedData, narrativeAnalysisResult, whatsappSocket, recipientIds) {
+async function handleOpenDecision(extractedData, narrativeAnalysisResult, whatsappSocket, recipientIds, analysisMeta = {}) {
     const {
         pair,
         arah,
@@ -510,7 +530,7 @@ async function handleOpenDecision(extractedData, narrativeAnalysisResult, whatsa
     const finalOrderData = { ...orderPayload,
         ticket: ticketId
     };
-    await saveOrderData(finalOrderData, narrativeAnalysisResult);
+    await saveOrderData(finalOrderData, narrativeAnalysisResult, analysisMeta);
 
     await broadcastMessage(whatsappSocket, recipientIds, {
         text: `✅ *AKSI DIAMBIL!* Order ${pair} (${arah}) telah dieksekusi.\n*Tiket:* #${ticketId}`

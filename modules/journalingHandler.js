@@ -72,6 +72,8 @@ async function recordTrade(closedTradeData, closeReason, finalBrokerData = {}) {
         await doc.loadInfo();
         const sheet = doc.sheetsByIndex[0];
 
+        const meta = closedTradeData.meta || {};
+        const exitType = /Take Profit/i.test(closeReason) ? 'TP' : (/Stop Loss/i.test(closeReason) ? 'SL' : 'CLOSE_MANUAL');
         const newRow = {
             'Tanggal': new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
             'Tiket': ticket,
@@ -84,6 +86,12 @@ async function recordTrade(closedTradeData, closeReason, finalBrokerData = {}) {
             'Status Penutupan': closeReason,
             'Profit': profit,
             'Analisis Awal': initialAnalysisText,
+            'Session Segment': meta.session_segment || '',
+            'Wick/ATR': meta.wick_atr_ratio || '',
+            'Hard Filter Pass': meta.hard_filter_pass !== false,
+            'Hard Filter Reason': meta.hard_filter_reason || '',
+            'Exit Type': exitType,
+            'R_result': 0
         };
 
         await sheet.addRow(newRow);

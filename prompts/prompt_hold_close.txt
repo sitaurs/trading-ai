@@ -61,8 +61,6 @@ HOLD jika: Harga masih bergerak wajar menuju level entry dan hipotesis awal masi
 
 B. Jika Posisi AKTIF:
 
-MOVE_SL_BE (Pindahkan SL ke Breakeven) jika: Harga telah bergerak profit dan mencapai RRR 1:1. Ini prioritas utama untuk mengamankan posisi.
-
 CLOSE_MANUAL jika salah satu kondisi ini terpenuhi:
 
 (C1) Struktur Rusak: Struktur pasar yang menjadi dasar entry awal sudah jelas tidak valid.

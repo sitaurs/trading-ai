@@ -69,10 +69,7 @@ FASE 3  · Entri & Manajemen
 3.1 Entry  : Limit di 50–62 % retrace candle impulsif BOS/MSS
 3.2 SL     : di luar wick Sweep + 5 pip + spread
 3.3 TP     : liquidity pool berikutnya, RRR ≥ 1:2 (wajib)
-3.4 Active :
-     • +1 R  → SL → BE
-     • +2 R  → Realisasi 50 %; sisa trailing 1×ATR‑M15
-3.5 Hard Exit:
+3.4 Hard Exit:
      • ≥ 22:00 WIB, atau
      • ≤ 30 m jelang news tier‑1 USD
 
@@ -101,9 +98,7 @@ Analisis Singkat
 3) Konfluens : EMA / RSI / BB, DXY mendukung…
 
 Manajemen Posisi
-• SL → BE di +1 R
-• Parsial 50 % di +2 R
-• Flat sisa paling lambat 22:00 WIB
+• Tutup posisi paling lambat 22:00 WIB
 
 Risiko Fundamental
 • News : {ringkasan NEWS}
