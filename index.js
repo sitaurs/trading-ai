@@ -87,7 +87,9 @@ async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
     log.info('Pengaturan awal dimuat:', { isNewsEnabled: global.botSettings.isNewsEnabled });
     log.info('Penerima notifikasi dimuat:', global.botSettings.recipients);
 
-    whatsappSocket = await startWhatsAppClient();
+    whatsappSocket = await startWhatsAppClient((sock) => {
+        whatsappSocket = sock;
+    });
 
     // --- Mengaktifkan Siklus Monitoring Otomatis ---
     const intervalMinutes = process.env.MONITORING_INTERVAL_MINUTES || 2;
