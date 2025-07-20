@@ -8,6 +8,8 @@ const fs = require('fs/promises');
 const path = require('path');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
+const { getLogger } = require('./logger');
+const log = getLogger('Journaling');
 
 // --- MODUL INTERNAL ---
 // PERBAIKAN: Menambahkan impor yang hilang untuk circuitBreaker
@@ -27,7 +29,7 @@ const JOURNAL_DIR = path.join(__dirname, '..', 'journal_data');
  */
 async function recordTrade(closedTradeData, closeReason, finalBrokerData = {}) {
     if (!closedTradeData || !closedTradeData.ticket) {
-        console.error("[JOURNALING] Dibatalkan: Menerima data trade yang tidak valid.");
+        log.error("[JOURNALING] Dibatalkan: Menerima data trade yang tidak valid.");
         return;
     }
 
@@ -36,7 +38,7 @@ async function recordTrade(closedTradeData, closeReason, finalBrokerData = {}) {
     // PERBAIKAN: Memastikan 'profit' diambil dengan aman
     const profit = (finalBrokerData && finalBrokerData.profit !== undefined) ? finalBrokerData.profit : 'N/A';
 
-    console.log(`[JOURNALING] Memulai proses pencatatan untuk tiket #${ticket}...`);
+    log.info(`[JOURNALING] Memulai proses pencatatan untuk tiket #${ticket}...`);
 
     // --- LOGIKA UNTUK MELAPORKAN KE CIRCUIT BREAKER ---
     const profitValue = parseFloat(profit);
@@ -59,7 +61,7 @@ async function recordTrade(closedTradeData, closeReason, finalBrokerData = {}) {
                 initialAnalysisText = journalData[ticket];
             }
         } catch (e) {
-            if (e.code !== 'ENOENT') console.error(`[JOURNALING] Error saat membaca file jurnal:`, e);
+            if (e.code !== 'ENOENT') log.error(`[JOURNALING] Error saat membaca file jurnal:`, e);
         }
 
         const serviceAccountAuth = new JWT({
@@ -95,11 +97,11 @@ async function recordTrade(closedTradeData, closeReason, finalBrokerData = {}) {
         };
 
         await sheet.addRow(newRow);
-        console.log(`[JOURNALING] Tiket #${ticket} berhasil dicatat ke Google Sheet.`);
+        log.info(`[JOURNALING] Tiket #${ticket} berhasil dicatat ke Google Sheet.`);
         await cleanupFiles(ticket, symbol);
 
     } catch (error) {
-        console.error(`[JOURNALING] Gagal total saat memproses jurnal untuk tiket #${ticket}:`, error);
+        log.error(`[JOURNALING] Gagal total saat memproses jurnal untuk tiket #${ticket}:`, error);
     }
 }
 
@@ -107,7 +109,7 @@ async function recordTrade(closedTradeData, closeReason, finalBrokerData = {}) {
  * Membersihkan semua file yang terkait dengan tiket yang sudah selesai.
  */
 async function cleanupFiles(ticket, symbol) {
-    console.log(`[JOURNALING] Memulai pembersihan file untuk tiket #${ticket}...`);
+    log.info(`[JOURNALING] Memulai pembersihan file untuk tiket #${ticket}...`);
     
     // PERBAIKAN: Membuat daftar file yang mungkin ada untuk dihapus agar lebih andal
     const filesToDelete = [
@@ -120,7 +122,7 @@ async function cleanupFiles(ticket, symbol) {
     for (const filePath of filesToDelete) {
         await fs.unlink(filePath).catch(e => {
             // Abaikan error jika file tidak ada (ENOENT), karena itu tujuannya.
-            if (e.code !== 'ENOENT') console.error(`Gagal menghapus file ${filePath}:`, e);
+            if (e.code !== 'ENOENT') log.error(`Gagal menghapus file ${filePath}:`, e);
         });
     }
 
@@ -135,18 +137,18 @@ async function cleanupFiles(ticket, symbol) {
             // Jika objek jurnal kosong setelah dihapus, hapus file nya sekalian
             if (Object.keys(journalData).length === 0) {
                 await fs.unlink(journalFilePath);
-                console.log(`[JOURNALING] File jurnal ${path.basename(journalFilePath)} kosong dan telah dihapus.`);
+                log.info(`[JOURNALING] File jurnal ${path.basename(journalFilePath)} kosong dan telah dihapus.`);
             } else {
                 await fs.writeFile(journalFilePath, JSON.stringify(journalData, null, 2), 'utf8');
             }
         }
     } catch (e) {
         if (e.code !== 'ENOENT') {
-            console.error(`[JOURNALING] Gagal memperbarui file jurnal untuk tiket #${ticket}:`, e);
+            log.error(`[JOURNALING] Gagal memperbarui file jurnal untuk tiket #${ticket}:`, e);
         }
     }
     
-    console.log(`[JOURNALING] Pembersihan untuk tiket #${ticket} selesai.`);
+    log.info(`[JOURNALING] Pembersihan untuk tiket #${ticket} selesai.`);
 }
 
 

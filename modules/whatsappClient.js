@@ -7,6 +7,8 @@ const {
 const { Boom } = require('@hapi/boom');
 const path = require('path');
 const fs = require('fs');
+const { getLogger } = require('./logger');
+const log = getLogger('WhatsApp');
 
 // Path untuk menyimpan file sesi. Penting agar tidak perlu login berulang kali.
 const SESSION_DIR = path.join(__dirname, '..', 'whatsapp-session');
@@ -25,7 +27,7 @@ async function startWhatsAppClient() {
     const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
     const { version, isLatest } = await fetchLatestBaileysVersion();
     
-    console.log(`Menggunakan Baileys v${version.join('.')}, Versi Terbaru: ${isLatest}`);
+    log.info(`Menggunakan Baileys v${version.join('.')}, Versi Terbaru: ${isLatest}`);
 
     const sock = makeWASocket({
         version,
@@ -41,23 +43,23 @@ async function startWhatsAppClient() {
         if (connection === 'close') {
             const error = new Boom(lastDisconnect?.error)?.output?.statusCode;
             
-            console.error('Koneksi terputus karena:', lastDisconnect?.error);
+            log.error('Koneksi terputus karena:', lastDisconnect?.error);
 
             // Jika error bukan karena logout manual, maka coba sambungkan kembali.
             if (error !== DisconnectReason.loggedOut) {
-                console.log('Mencoba menyambungkan kembali...');
+                log.info('Mencoba menyambungkan kembali...');
                 startWhatsAppClient();
             } else {
-                console.log('Koneksi ditutup permanen (Logged Out). Hapus folder "whatsapp-session" untuk memulai sesi baru.');
+                log.info('Koneksi ditutup permanen (Logged Out). Hapus folder "whatsapp-session" untuk memulai sesi baru.');
             }
         } else if (connection === 'open') {
-            console.log('✅ Koneksi WhatsApp berhasil! Bot siap menerima perintah.');
+            log.info('✅ Koneksi WhatsApp berhasil! Bot siap menerima perintah.');
         }
 
         // Jika ada QR code baru, tampilkan di terminal (sudah di-handle oleh printQRInTerminal=true)
         // Log ini sebagai cadangan jika ada masalah.
     if (qr) {
-        console.log('Pindai QR Code ini dengan aplikasi WhatsApp di ponsel Anda.');
+        log.info('Pindai QR Code ini dengan aplikasi WhatsApp di ponsel Anda.');
         const qrcode = require('qrcode-terminal'); // Panggil librarynya di sini
         qrcode.generate(qr, { small: true });   // <--- TAMBAHKAN BARIS INI untuk mencetak QR
     }

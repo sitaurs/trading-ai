@@ -1,10 +1,18 @@
 const tz = 'Asia/Jakarta';
 
 function parseRawSessions(str) {
-  return (str || '').split(',').map(s => {
-    const [start,end] = s.split('-');
-    return {start:start.trim(), end:end.trim()};
-  }).filter(s => s.start && s.end);
+  return (str || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => {
+      const parts = s.split('-');
+      if (parts.length < 2) return null;
+      const [start, end] = parts;
+      if (!start || !end) return null;
+      return { start: start.trim(), end: end.trim() };
+    })
+    .filter(Boolean);
 }
 
 function toMinutes(t){
@@ -35,10 +43,11 @@ function mergeIntervals(intervals){
   return result;
 }
 
+const DEFAULT_SESSIONS = '14:00-23:00,19:00-04:00';
 let cachedWindows=null;
 function buildWindows(){
   if(cachedWindows) return cachedWindows;
-  const raw = parseRawSessions(process.env.TRADING_SESSIONS);
+  const raw = parseRawSessions(process.env.TRADING_SESSIONS || DEFAULT_SESSIONS);
   const expanded = raw.map(expandSlot);
   cachedWindows = mergeIntervals(expanded);
   return cachedWindows;

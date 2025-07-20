@@ -1,5 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
+const { getLogger } = require('./logger');
+const log = getLogger('CircuitBreaker');
 
 const STATS_PATH = path.join(__dirname, '..', 'config', 'circuit_breaker_stats.json');
 const MAX_CONSECUTIVE_LOSSES = 3; // Anda bisa mengubah angka ini nanti
@@ -20,14 +22,14 @@ async function saveStats(stats) {
 async function recordLoss() {
     const stats = await getStats();
     stats.consecutiveLosses += 1;
-    console.log(`[Circuit Breaker] Kerugian dicatat. Total kerugian beruntun: ${stats.consecutiveLosses}`);
+    log.info(`Kerugian dicatat. Total kerugian beruntun: ${stats.consecutiveLosses}`);
     await saveStats(stats);
 }
 
 async function recordWin() {
     const stats = await getStats();
     if (stats.consecutiveLosses > 0) {
-        console.log(`[Circuit Breaker] Keuntungan dicatat. Kerugian beruntun direset ke 0.`);
+        log.info('Keuntungan dicatat. Kerugian beruntun direset ke 0.');
         stats.consecutiveLosses = 0;
         await saveStats(stats);
     }
@@ -38,7 +40,7 @@ async function isTripped() {
     const today = new Date().toISOString().split('T')[0];
 
     if (stats.lastResetDate !== today) {
-        console.log('[Circuit Breaker] Hari baru, penghitung kerugian direset.');
+        log.info('Hari baru, penghitung kerugian direset.');
         stats.consecutiveLosses = 0;
         stats.lastResetDate = today;
         await saveStats(stats);
@@ -46,7 +48,7 @@ async function isTripped() {
     }
 
     if (stats.consecutiveLosses >= MAX_CONSECUTIVE_LOSSES) {
-        console.warn(`[Circuit Breaker] !!! CIRCUIT BREAKER AKTIF: Mencapai ${stats.consecutiveLosses} kerugian beruntun.`);
+        log.warn(`!!! CIRCUIT BREAKER AKTIF: Mencapai ${stats.consecutiveLosses} kerugian beruntun.`);
         return true;
     }
 

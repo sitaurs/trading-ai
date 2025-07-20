@@ -5,6 +5,8 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const { getLogger } = require('./logger');
+const log = getLogger('CommandHandler');
 
 // Impor modul dan definisikan path yang relevan
 const broker = require('./brokerHandler');
@@ -140,7 +142,7 @@ async function handleSettingsCommand(command, botSettings, chatId, whatsappSocke
         botSettings.isNewsEnabled = isActive;
         responseMessage = `✅ Pengaturan Pencarian Berita sekarang: *${isActive ? 'AKTIF' : 'NONAKTIF'}*`;
     }
-    console.log('Pengaturan diubah:', botSettings);
+    log.info('Pengaturan diubah:', botSettings);
     await whatsappSocket.sendMessage(chatId, { text: responseMessage });
 }
 
@@ -206,11 +208,11 @@ async function handleCloseCommand(text, chatId, whatsappSocket) {
         let closeReason;
 
         if (tradeType === 'pending') {
-            console.log(`[COMMAND HANDLER] Membatalkan pending order #${tradeToClose.ticket} secara manual.`);
+            log.info(`[COMMAND HANDLER] Membatalkan pending order #${tradeToClose.ticket} secara manual.`);
             closeResult = await broker.cancelPendingOrder(tradeToClose.ticket);
             closeReason = 'Manual Cancel by User';
         } else { // tradeType === 'live'
-            console.log(`[COMMAND HANDLER] Menutup posisi #${tradeToClose.ticket} secara manual.`);
+            log.info(`[COMMAND HANDLER] Menutup posisi #${tradeToClose.ticket} secara manual.`);
             closeResult = await broker.closePosition(tradeToClose.ticket);
             closeReason = 'Manual Close by User';
         }
@@ -219,7 +221,7 @@ async function handleCloseCommand(text, chatId, whatsappSocket) {
         await whatsappSocket.sendMessage(chatId, { text: `✅ *SUKSES!* Order untuk *${pair}* (#${tradeToClose.ticket}) telah ditutup/dibatalkan.` });
 
     } catch (error) {
-        console.error(`[COMMAND HANDLER] Gagal saat menjalankan /cls untuk ${pair}:`, error);
+        log.error(`[COMMAND HANDLER] Gagal saat menjalankan /cls untuk ${pair}:`, error);
         await whatsappSocket.sendMessage(chatId, { text: `❌ Gagal menutup order untuk *${pair}*.\n*Error:* ${error.message}` });
     }
 }
