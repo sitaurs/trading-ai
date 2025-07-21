@@ -36,7 +36,7 @@
 
 1. **Klon repositori dan masuk ke direktori proyek**
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/sitaurs/trading-ai
    cd trading-ai
    ```
 2. **Pasang dependensi Node.js**
