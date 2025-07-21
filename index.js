@@ -46,6 +46,15 @@ async function loadRecipients() {
     }
 }
 
+async function readJsonFile(filePath) {
+    try {
+        const data = await fs.readFile(filePath, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        return null;
+    }
+}
+
 /**
  * Helper untuk menulis file JSON.
  */
@@ -80,11 +89,18 @@ global.broadcastMessage = (messageText) => {
  */
 async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
     log.info('Memulai bot...');
+    const status = await readJsonFile(path.join(CONFIG_DIR, 'bot_status.json')) || {};
     global.botSettings = {
         isNewsEnabled: process.env.ENABLE_NEWS_SEARCH === 'true',
+        sessionEnabled: status.sessionEnabled !== false,
+        filterEnabled: status.filterEnabled !== false,
         recipients: await loadRecipients()
     };
-    log.info('Pengaturan awal dimuat:', { isNewsEnabled: global.botSettings.isNewsEnabled });
+    log.info('Pengaturan awal dimuat:', {
+        isNewsEnabled: global.botSettings.isNewsEnabled,
+        sessionEnabled: global.botSettings.sessionEnabled,
+        filterEnabled: global.botSettings.filterEnabled
+    });
     log.info('Penerima notifikasi dimuat:', global.botSettings.recipients);
 
     whatsappSocket = await startWhatsAppClient((sock) => {
@@ -139,6 +155,8 @@ async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
 *KONTROL BOT*
 ▫️ \`/pause\` : Menghentikan sementara trading terjadwal.
 ▫️ \`/resume\` : Melanjutkan trading terjadwal.
+▫️ \`/sesi on|off\` : Aktif/nonaktif filter sesi.
+▫️ \`/filter on|off\` : Aktif/nonaktif hard filter.
 
 *NOTIFIKASI*
 ▫️ \`/list_recipients\`
@@ -174,6 +192,12 @@ async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
                     break;
                 case '/resume': // Perintah baru
                     await commandHandler.handleResumeCommand(whatsappSocket, chatId);
+                    break;
+                case '/sesi':
+                    await commandHandler.handleSesiCommand(text, global.botSettings, chatId, whatsappSocket);
+                    break;
+                case '/filter':
+                    await commandHandler.handleFilterCommand(text, global.botSettings, chatId, whatsappSocket);
                     break;
                 case '/profit_today': // Perintah baru
                     await commandHandler.handleProfitTodayCommand(whatsappSocket, chatId);
