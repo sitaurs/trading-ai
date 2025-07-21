@@ -240,6 +240,7 @@ module.exports={
     writeJsonFile,
     getChartImages,
     broadcastMessage,
+    getEconomicNews,
     getDailyNews,
     getMarketContext,
     getCurrentMarketSession,

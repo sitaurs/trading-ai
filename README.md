@@ -146,6 +146,8 @@ Bot menerima beberapa perintah teks. Berikut ringkasannya:
 - `/status` – Ringkasan status bot dan posisi saat ini.
 - `/dxy` – Analisis khusus indeks dolar.
 - `/<pair>` (misal `/usdjpy`) – Meminta analisis instan untuk pair tersebut.
+- `/<pair> force` – Memaksa analisis pair, melewati filter sesi dan hard filter.
+- `/news` – Mencari berita ekonomi berdampak tinggi secara manual.
 - `/cls <PAIR>` – Menutup posisi atau pending order yang sedang tercatat.
 - `/pause` dan `/resume` – Menjeda atau melanjutkan analisis otomatis terjadwal.
 - `/profit_today` – Menampilkan total profit/loss hari ini.
