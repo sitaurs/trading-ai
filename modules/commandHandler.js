@@ -13,6 +13,7 @@ const broker = require('./brokerHandler');
 const journalingHandler = require('./journalingHandler');
 // PERBAIKAN: Menambahkan impor yang hilang
 const analysisHandler = require('./analysisHandler');
+const { getEconomicNews } = require('./analysis/helpers');
 
 const PENDING_DIR = path.join(__dirname, '..', 'pending_orders');
 const POSITIONS_DIR = path.join(__dirname, '..', 'live_positions');
@@ -55,6 +56,8 @@ async function handleMenuCommand(whatsappSocket, chatId, supportedPairs = []) {
 *ANALISIS*
 ▫️ \`/dxy\` : Analisis DXY.
 ▫️ \`/${supportedPairs.join(', /').toLowerCase()}\` : Analisis Pair.
+▫️ \`/<pair> force\` : Analisis paksa pair (abaikan filter).
+▫️ \`/news\` : Cari berita ekonomi terbaru.
 
 *MANAJEMEN & LAPORAN*
 ▫️ \`/status\` : Status lengkap bot.
@@ -255,6 +258,12 @@ async function handleProfitTodayCommand(whatsappSocket, chatId) {
     }
 }
 
+async function handleNewsCommand(whatsappSocket, chatId) {
+    await whatsappSocket.sendMessage(chatId, { text: '⏳ Mencari berita ekonomi terbaru...' });
+    const news = await getEconomicNews();
+    await whatsappSocket.sendMessage(chatId, { text: `📰 *Berita Ekonomi:*\n\n${news}` });
+}
+
 module.exports = {
     handleMenuCommand,
     handleConsolidatedStatusCommand,
@@ -266,5 +275,6 @@ module.exports = {
     handleListRecipients,
     handlePauseCommand,
     handleResumeCommand,
-    handleProfitTodayCommand
+    handleProfitTodayCommand,
+    handleNewsCommand
 };

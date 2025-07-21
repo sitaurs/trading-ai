@@ -178,6 +178,9 @@ async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
                 case '/profit_today': // Perintah baru
                     await commandHandler.handleProfitTodayCommand(whatsappSocket, chatId);
                     break;
+                case '/news':
+                    await commandHandler.handleNewsCommand(whatsappSocket, chatId);
+                    break;
                 case '/dxy':
                     if (global.botSettings.recipients.length === 0) return;
                     await analysisHandler.analyzeDXY(whatsappSocket, global.botSettings.recipients);
@@ -187,12 +190,14 @@ async function main() { // PERBAIKAN: Kurung kurawal pembuka dipindahkan ke sini
                     await analysisHandler.runScheduledAnalysis(SUPPORTED_PAIRS, global.botSettings, whatsappSocket, global.botSettings.recipients);
                     break;
                 default:
-                    const requestedPair = command.substring(1).toUpperCase();
+                    const parts = text.split(' ');
+                    const requestedPair = parts[0].substring(1).toUpperCase();
+                    const force = parts[1] && parts[1].toLowerCase() === 'force';
                     if (SUPPORTED_PAIRS.includes(requestedPair)) {
                         if (global.botSettings.recipients.length === 0) return;
-                        await analysisHandler.handleAnalysisRequest(requestedPair, null, global.botSettings, whatsappSocket, global.botSettings.recipients);
+                        await analysisHandler.handleAnalysisRequest(requestedPair, null, global.botSettings, whatsappSocket, global.botSettings.recipients, force);
                     }
-                    break; 
+                    break;
             }
         } catch (error) {
             log.error(`Error saat memproses perintah "${text}":`, error);

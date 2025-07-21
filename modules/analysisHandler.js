@@ -28,14 +28,14 @@ const { handleOpenDecision, handleCloseDecision, handleNoTradeDecision } = requi
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 const supportedPairs = (process.env.SUPPORTED_PAIRS || '').split(',').map(p => p.trim().toUpperCase());
 
-async function handleAnalysisRequest(pair, dxyAnalysisText, botSettings, whatsappSocket, recipientIds){
+async function handleAnalysisRequest(pair, dxyAnalysisText, botSettings, whatsappSocket, recipientIds, force = false){
   if(await circuitBreaker.isTripped()){
     const msg = '🛑 *PERINGATAN:* CIRCUIT BREAKER AKTIF.';
     log.warn(msg);
     await broadcastMessage(whatsappSocket, recipientIds, {text: msg});
     return;
   }
-  if(!isWithinSession()){
+  if(!force && !isWithinSession()){
     log.info(`[${pair}] outside_session`);
     await broadcastMessage(whatsappSocket, recipientIds, {
       text: `⚠️ Analisis *${pair}* dilewati: di luar sesi trading yang diizinkan.`
@@ -43,19 +43,23 @@ async function handleAnalysisRequest(pair, dxyAnalysisText, botSettings, whatsap
     return;
   }
   const hf = await passesHardFilter(pair);
-  if(!hf.pass){
+  if(!hf.pass && !force){
     log.info(`[${pair}] hard_filter_fail reason=${hf.reason} atr=${hf.atr} range=${hf.range} body=${hf.body}`);
     await broadcastMessage(whatsappSocket, recipientIds, {
       text: `⚠️ Analisis *${pair}* dibatalkan karena gagal hard filter.\n*Alasan:* ${hf.reason}`
     });
     return;
   }
-  log.info(`[${pair}] hard_filter_pass wickAtr=${hf.wickAtrRatio}`);
+  if(force) {
+    log.info(`[${pair}] FORCE mode aktif - melewati sesi dan hard filter`);
+  } else {
+    log.info(`[${pair}] hard_filter_pass wickAtr=${hf.wickAtrRatio}`);
+  }
   const analysisMeta={
     session_segment: classifySegment(),
     wick_atr_ratio: hf.wickAtrRatio,
-    hard_filter_pass: true,
-    hard_filter_reason: null
+    hard_filter_pass: hf.pass,
+    hard_filter_reason: hf.pass ? null : hf.reason
   };
   log.info(`===== MEMULAI SIKLUS ANALISIS UNTUK ${pair} =====`);
   await broadcastMessage(whatsappSocket, recipientIds, {text:`⏳ *Analisis Dimulai untuk ${pair}...*`});
