@@ -35,20 +35,23 @@ async function handleAnalysisRequest(pair, dxyAnalysisText, botSettings, whatsap
     await broadcastMessage(whatsappSocket, recipientIds, {text: msg});
     return;
   }
-  if(!force && !isWithinSession()){
+  if(!force && botSettings.sessionEnabled !== false && !isWithinSession()){
     log.info(`[${pair}] outside_session`);
     await broadcastMessage(whatsappSocket, recipientIds, {
       text: `⚠️ Analisis *${pair}* dilewati: di luar sesi trading yang diizinkan.`
     });
     return;
   }
-  const hf = await passesHardFilter(pair);
-  if(!hf.pass && !force){
-    log.info(`[${pair}] hard_filter_fail reason=${hf.reason} atr=${hf.atr} range=${hf.range} body=${hf.body}`);
-    await broadcastMessage(whatsappSocket, recipientIds, {
-      text: `⚠️ Analisis *${pair}* dibatalkan karena gagal hard filter.\n*Alasan:* ${hf.reason}`
-    });
-    return;
+  let hf = {pass: true, wickAtrRatio: null, reason: null, atr:null, range:null, body:null};
+  if(botSettings.filterEnabled !== false){
+    hf = await passesHardFilter(pair);
+    if(!hf.pass && !force){
+      log.info(`[${pair}] hard_filter_fail reason=${hf.reason} atr=${hf.atr} range=${hf.range} body=${hf.body}`);
+      await broadcastMessage(whatsappSocket, recipientIds, {
+        text: `⚠️ Analisis *${pair}* dibatalkan karena gagal hard filter.\n*Alasan:* ${hf.reason}`
+      });
+      return;
+    }
   }
   if(force) {
     log.info(`[${pair}] FORCE mode aktif - melewati sesi dan hard filter`);

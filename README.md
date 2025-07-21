@@ -150,6 +150,8 @@ Bot menerima beberapa perintah teks. Berikut ringkasannya:
 - `/news` – Mencari berita ekonomi berdampak tinggi secara manual.
 - `/cls <PAIR>` – Menutup posisi atau pending order yang sedang tercatat.
 - `/pause` dan `/resume` – Menjeda atau melanjutkan analisis otomatis terjadwal.
+- `/sesi on|off` – Mengaktifkan atau menonaktifkan pengecekan sesi trading.
+- `/filter on|off` – Mengaktifkan atau menonaktifkan hard filter candle.
 - `/profit_today` – Menampilkan total profit/loss hari ini.
 - `/add_recipient <ID_WA>` dan `/del_recipient <ID_WA>` – Kelola daftar penerima notifikasi.
 - `/list_recipients` – Menampilkan daftar penerima.

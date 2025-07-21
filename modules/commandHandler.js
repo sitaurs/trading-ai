@@ -45,6 +45,12 @@ async function writeJsonFile(filePath, data) {
     await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
+async function updateBotStatus(patch) {
+    const current = await readJsonFile(BOT_STATUS_PATH) || {};
+    const updated = { ...current, ...patch };
+    await writeJsonFile(BOT_STATUS_PATH, updated);
+}
+
 
 // --- FUNGSI-FUNGSI COMMAND HANDLER ---
 
@@ -75,6 +81,8 @@ async function handleMenuCommand(whatsappSocket, chatId, supportedPairs = []) {
 
 *PENGATURAN*
 ▫️ \`/setting berita <on|off>\`
+▫️ \`/sesi <on|off>\`
+▫️ \`/filter <on|off>\`
     `;
     await whatsappSocket.sendMessage(chatId, { text: menuText.trim() });
 }
@@ -236,13 +244,35 @@ async function handleEntryCommand(command, chatId, whatsappSocket) {
 }
 
 async function handlePauseCommand(whatsappSocket, chatId) {
-    await writeJsonFile(BOT_STATUS_PATH, { isPaused: true });
+    await updateBotStatus({ isPaused: true });
     await whatsappSocket.sendMessage(chatId, { text: '⏸️ *Bot Dijeda.* Analisis trading terjadwal telah dihentikan.' });
 }
 
 async function handleResumeCommand(whatsappSocket, chatId) {
-    await writeJsonFile(BOT_STATUS_PATH, { isPaused: false });
+    await updateBotStatus({ isPaused: false });
     await whatsappSocket.sendMessage(chatId, { text: '▶️ *Bot Dilanjutkan.* Analisis trading terjadwal telah diaktifkan kembali.' });
+}
+
+async function handleSesiCommand(command, botSettings, chatId, whatsappSocket) {
+    const parts = command.split(' ');
+    if (parts.length < 2 || !['on', 'off'].includes(parts[1].toLowerCase())) {
+        return whatsappSocket.sendMessage(chatId, { text: 'Format salah. Gunakan: `/sesi <on|off>`' });
+    }
+    const isActive = parts[1].toLowerCase() === 'on';
+    botSettings.sessionEnabled = isActive;
+    await updateBotStatus({ sessionEnabled: isActive });
+    await whatsappSocket.sendMessage(chatId, { text: `✅ Filter sesi sekarang: *${isActive ? 'AKTIF' : 'NONAKTIF'}*` });
+}
+
+async function handleFilterCommand(command, botSettings, chatId, whatsappSocket) {
+    const parts = command.split(' ');
+    if (parts.length < 2 || !['on', 'off'].includes(parts[1].toLowerCase())) {
+        return whatsappSocket.sendMessage(chatId, { text: 'Format salah. Gunakan: `/filter <on|off>`' });
+    }
+    const isActive = parts[1].toLowerCase() === 'on';
+    botSettings.filterEnabled = isActive;
+    await updateBotStatus({ filterEnabled: isActive });
+    await whatsappSocket.sendMessage(chatId, { text: `✅ Hard filter sekarang: *${isActive ? 'AKTIF' : 'NONAKTIF'}*` });
 }
 
 async function handleProfitTodayCommand(whatsappSocket, chatId) {
@@ -275,6 +305,8 @@ module.exports = {
     handleListRecipients,
     handlePauseCommand,
     handleResumeCommand,
+    handleSesiCommand,
+    handleFilterCommand,
     handleProfitTodayCommand,
     handleNewsCommand
 };
