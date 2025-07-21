@@ -37,11 +37,17 @@ async function handleAnalysisRequest(pair, dxyAnalysisText, botSettings, whatsap
   }
   if(!isWithinSession()){
     log.info(`[${pair}] outside_session`);
+    await broadcastMessage(whatsappSocket, recipientIds, {
+      text: `⚠️ Analisis *${pair}* dilewati: di luar sesi trading yang diizinkan.`
+    });
     return;
   }
   const hf = await passesHardFilter(pair);
   if(!hf.pass){
     log.info(`[${pair}] hard_filter_fail reason=${hf.reason} atr=${hf.atr} range=${hf.range} body=${hf.body}`);
+    await broadcastMessage(whatsappSocket, recipientIds, {
+      text: `⚠️ Analisis *${pair}* dibatalkan karena gagal hard filter.\n*Alasan:* ${hf.reason}`
+    });
     return;
   }
   log.info(`[${pair}] hard_filter_pass wickAtr=${hf.wickAtrRatio}`);
