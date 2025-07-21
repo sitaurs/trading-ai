@@ -12,6 +12,7 @@ const JOURNAL_DIR = path.join(__dirname, '..', '..', 'journal_data');
 const CACHE_DIR = path.join(__dirname, '..', '..', 'analysis_cache');
 const DXY_SYMBOL = 'TVC:DXY';
 const API_KEY_STATUS_PATH = path.join(__dirname, '..', '..', 'config', 'api_key_status.json');
+const NEWS_CACHE_PATH = path.join(CACHE_DIR, 'daily_news.json');
 
 let chartImgKeyIndex = loadLastKeyIndex();
 
@@ -178,11 +179,23 @@ async function getEconomicNews(){
     }
 }
 
+async function getDailyNews(){
+    const today = new Date().toISOString().slice(0,10);
+    const cached = await readJsonFile(NEWS_CACHE_PATH);
+    if(cached && cached.date === today && cached.news){
+        log.info('Menggunakan berita ekonomi dari cache.');
+        return cached.news;
+    }
+    const news = await getEconomicNews();
+    await writeJsonFile(NEWS_CACHE_PATH, {date: today, news});
+    return news;
+}
+
 async function getMarketContext(botSettings){
     let news='Pengecekan berita dinonaktifkan.';
     if(botSettings.isNewsEnabled){
         log.info('Fitur berita aktif, mengambil data berita...');
-        news=await getEconomicNews();
+        news=await getDailyNews();
     }
     const context={session:getCurrentMarketSession(), news};
     log.info('Konteks pasar berhasil dibuat.', context);
@@ -227,6 +240,7 @@ module.exports={
     writeJsonFile,
     getChartImages,
     broadcastMessage,
+    getDailyNews,
     getMarketContext,
     getCurrentMarketSession,
     getCurrentWIBDatetime,

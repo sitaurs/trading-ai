@@ -92,17 +92,51 @@ Pengujian unit sederhana dapat dijalankan dengan:
 npm test
 ```
 
-## Alur Kerja Sistem
+### Menjalankan dengan PM2
 
-1. **Inisialisasi** – `index.js` memuat variabel dari `.env`, membaca daftar penerima (`config/recipients.json`), dan memulai koneksi WhatsApp.
-2. **Analisis Terjadwal** – Modul `analysisHandler` dijadwalkan menggunakan `node-cron` untuk mengeksekusi analisis DXY dan semua pair yang didukung tiap jam. Hasil analisis serta gambar chart dikirim via WhatsApp.
-3. **Pengambilan Keputusan** – Teks analisis naratif dari Gemini diekstraksi oleh modul `extractor` menjadi struktur data (`pair`, `arah`, `sl`, `tp`, dan sebagainya). Modul `decisionHandlers` mengeksekusi keputusan:
-   - **OPEN** – memanggil API broker untuk membuka order, menyimpan data ke folder `pending_orders/` atau `live_positions/` dan mencatat jurnal awal.
-   - **CLOSE_MANUAL** – menutup atau membatalkan order yang ada melalui broker, lalu menuliskannya ke jurnal.
-   - **HOLD/NO_TRADE** – hanya mengirim notifikasi tanpa aksi trading.
-4. **Monitoring** – `monitoringHandler` berjalan periodik memeriksa apakah pending order berubah menjadi posisi live atau apakah posisi live telah tertutup. Jika posisi tertutup, modul ini mengambil detail profit melalui broker dan memanggil `journalingHandler` untuk mencatatnya.
-5. **Journaling** – Data trading yang selesai akan dicatat ke Google Sheets menggunakan kredensial Service Account, lalu file terkait dibersihkan. Modul ini juga berinteraksi dengan `circuitBreaker` untuk menghitung kemenangan dan kekalahan berturut-turut.
-6. **Circuit Breaker** – Jika kerugian beruntun melebihi batas (`MAX_CONSECUTIVE_LOSSES` di `modules/circuitBreaker.js`), modul ini akan menahan eksekusi analisis selanjutnya hingga hari berikutnya.
+Untuk menjalankan bot secara permanen di latar belakang Anda dapat memakai [PM2](https://pm2.keymetrics.io/):
+
+```bash
+npm install -g pm2
+pm2 start index.js --name trading-bot
+pm2 logs trading-bot     # melihat log
+pm2 startup              # jika ingin autostart saat boot
+pm2 save
+```
+
+## Alur Kerja Trading AI Bot (Dimulai dari Jadwal)
+
+Alur berikut terjadi otomatis setiap jam berkat `node-cron` di `index.js`.
+
+**Tahap 1: Pemicu Jadwal & Pemeriksaan Awal**
+
+1. `runScheduledAnalysis` dipanggil pada waktunya dan mengecek `config/bot_status.json`. Jika `isPaused` bernilai `true`, siklus dilewati.
+2. Bot mengirim pesan pembuka ke seluruh penerima terdaftar.
+
+**Tahap 2: Analisis Konteks Pasar (DXY)**
+
+3. Fungsi `analyzeDXY` mengambil gambar chart DXY dari `chart-img.com` dan mengirim prompt ke Gemini.
+4. Sentimen DXY disimpan pada `analysis_cache/last_result_DXY.json` dan dikirim ke pengguna.
+
+**Tahap 3: Analisis Setiap Pair**
+
+5. Bot melakukan perulangan untuk setiap pair di `.env` dan melewati `hardFilter.js` untuk validasi volatilitas.
+6. Data chart, OHLCV, hasil analisis DXY, sesi pasar, serta berita ekonomi harian dari `analysis_cache/daily_news.json` (diambil sekali per hari) digabung ke dalam `prompt_new_analysis.txt`.
+7. Gemini mengembalikan analisis naratif berikut keputusan trading.
+
+**Tahap 4: Eksekusi Keputusan**
+
+8. `extractor.js` mengubah teks naratif menjadi JSON dan `decisionHandlers.js` mengeksekusi hasilnya:
+   - Membuka posisi via broker jika keputusan `OPEN`.
+   - Menutup posisi bila `CLOSE_MANUAL`.
+   - Atau hanya mengirim notifikasi bila `HOLD`/`NO_TRADE`.
+
+**Tahap 5: Monitoring & Jurnal**
+
+9. `monitoringHandler.js` memeriksa perubahan status pending order maupun posisi live.
+10. Ketika posisi selesai, `journalingHandler.js` mencatat hasil ke Google Sheets dan memperbarui statistik `circuitBreaker`.
+
+Siklus ini berulang setiap jadwal sehingga bot dapat beroperasi secara otomatis sepanjang hari.
 
 ## Perintah WhatsApp
 
