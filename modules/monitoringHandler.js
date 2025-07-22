@@ -14,6 +14,16 @@ const log = getLogger('Monitoring');
 const PENDING_DIR = path.join(__dirname, '..', 'pending_orders');
 const POSITIONS_DIR = path.join(__dirname, '..', 'live_positions');
 
+// Pastikan direktori penting ada sebelum digunakan
+async function ensureDir(dir) {
+    try {
+        await fs.access(dir);
+    } catch (_) {
+        await fs.mkdir(dir, { recursive: true });
+        log.info(`[MONITORING] Direktori dibuat: ${dir}`);
+    }
+}
+
 /**
  * Fungsi pembungkus untuk memastikan fungsi broadcast global tersedia sebelum digunakan.
  * @param {string} message - Pesan yang akan dikirim.
@@ -35,6 +45,8 @@ async function checkAllTrades() {
     log.info(`[MONITORING] Memulai pengecekan...`);
 
     try {
+        await ensureDir(PENDING_DIR);
+        await ensureDir(POSITIONS_DIR);
         // Ambil daftar posisi yang sedang aktif dari broker
         const activePositions = await broker.getActivePositions();
         const activeTickets = activePositions.map(p => p.ticket);
@@ -56,8 +68,14 @@ async function checkAllTrades() {
                 // Pindahkan file dari folder 'pending_orders' ke 'live_positions'
 const newPositionFileName = `trade_${pendingData.symbol}.json`; // <-- NAMA FILE DISTANDARISASI
 const newPath = path.join(POSITIONS_DIR, newPositionFileName);
-// Langsung ganti nama file untuk memindahkannya. Ini lebih efisien.
-await fs.rename(filePath, newPath);
+// Pastikan direktori tujuan ada sebelum memindahkan
+await ensureDir(POSITIONS_DIR);
+try {
+    await fs.rename(filePath, newPath);
+} catch (err) {
+    log.error(`[MONITORING] Gagal memindahkan ${filePath} ke ${newPath}:`, err);
+    continue;
+}
 
 broadcast(`✅ *Order Terekseskusi:* Pending order untuk ${pendingData.symbol} (#${pendingData.ticket}) telah menjadi posisi aktif.`);
             }
