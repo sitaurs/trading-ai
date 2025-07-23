@@ -107,10 +107,14 @@ async function recordTrade(closedTradeData, closeReason, finalBrokerData = {}) {
 
         await sheet.addRow(newRow);
         log.info(`[JOURNALING] Tiket #${ticket} berhasil dicatat ke Google Sheet.`);
-        await cleanupFiles(ticket, symbol);
 
     } catch (error) {
+        // Jika penulisan ke Google Sheets gagal kita tetap ingin
+        // membersihkan data lokal agar monitoring tidak berulang
         log.error(`[JOURNALING] Gagal total saat memproses jurnal untuk tiket #${ticket}:`, error);
+    } finally {
+        // Jalankan cleanup apapun hasilnya
+        await cleanupFiles(ticket, symbol);
     }
 }
 
