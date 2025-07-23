@@ -14,6 +14,9 @@ const log = getLogger('Monitoring');
 const PENDING_DIR = path.join(__dirname, '..', 'pending_orders');
 const POSITIONS_DIR = path.join(__dirname, '..', 'live_positions');
 
+// Gunakan flag sederhana untuk mencegah checkAllTrades berjalan tumpang tindih
+let isChecking = false;
+
 // Pastikan direktori penting ada sebelum digunakan
 async function ensureDir(dir) {
     try {
@@ -42,6 +45,11 @@ const broadcast = (message) => {
  * - Cek posisi live yang sudah ditutup.
  */
 async function checkAllTrades() {
+    if (isChecking) {
+        log.warn('[MONITORING] Pengecekan masih berjalan, siklus baru dilewati.');
+        return;
+    }
+    isChecking = true;
     log.info(`[MONITORING] Memulai pengecekan...`);
 
     try {
@@ -148,8 +156,10 @@ broadcast(`✅ *Order Terekseskusi:* Pending order untuk ${pendingData.symbol} (
 
     } catch (mainError) {
         log.error('[MONITORING] Terjadi error besar di dalam loop monitoring:', mainError);
+    } finally {
+        isChecking = false;
+        log.info(`[MONITORING] Pengecekan selesai.`);
     }
-    log.info(`[MONITORING] Pengecekan selesai.`);
 }
 
 module.exports = {
