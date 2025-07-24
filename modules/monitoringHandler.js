@@ -13,6 +13,7 @@ const log = getLogger('Monitoring');
 // --- LOKASI DIREKTORI ---
 const PENDING_DIR = path.join(__dirname, '..', 'pending_orders');
 const POSITIONS_DIR = path.join(__dirname, '..', 'live_positions');
+const DAILY_LOG_PATH = path.join(__dirname, '..', 'config', 'daily_profit_log.json');
 
 // Gunakan flag sederhana untuk mencegah checkAllTrades berjalan tumpang tindih
 let isChecking = false;
@@ -25,6 +26,35 @@ async function ensureDir(dir) {
         await fs.mkdir(dir, { recursive: true });
         log.info(`[MONITORING] Direktori dibuat: ${dir}`);
     }
+}
+
+async function readJsonFile(filePath) {
+    try {
+        const data = await fs.readFile(filePath, 'utf8');
+        return JSON.parse(data);
+    } catch (err) {
+        if (err.code !== 'ENOENT') log.error('Gagal membaca file JSON:', err);
+        return null;
+    }
+}
+
+async function writeJsonFile(filePath, data) {
+    const dir = path.dirname(filePath);
+    await fs.mkdir(dir, { recursive: true }).catch(() => {});
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+}
+
+async function updateDailyProfitLog(ticket, profit) {
+    const today = new Date().toISOString().split('T')[0];
+    const logData = await readJsonFile(DAILY_LOG_PATH) || {};
+    if (!logData[today]) {
+        logData[today] = { totalProfit: 0, wins: 0, losses: 0, trades: [] };
+    }
+    logData[today].totalProfit += profit;
+    if (profit > 0) logData[today].wins += 1;
+    else if (profit < 0) logData[today].losses += 1;
+    logData[today].trades.push({ ticket, profit });
+    await writeJsonFile(DAILY_LOG_PATH, logData);
 }
 
 /**
@@ -133,6 +163,8 @@ broadcast(`✅ *Order Terekseskusi:* Pending order untuk ${pendingData.symbol} (
                     }
                     
                     broadcast(notificationMessage);
+                    // Perbarui catatan profit harian
+                    await updateDailyProfitLog(positionData.ticket, profit);
                     // Kirim data yang akurat ke journaling
                     await journaling.recordTrade(positionData, closeReasonText, closingDeal);
 

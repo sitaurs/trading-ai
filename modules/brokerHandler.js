@@ -4,12 +4,15 @@
  */
 
 const axios = require('axios');
+const fs = require('fs').promises;
+const path = require('path');
 const { getLogger } = require('./logger');
 const log = getLogger('BrokerHandler');
 
 // Mengambil konfigurasi dari environment variables
 const API_BASE_URL = process.env.BROKER_API_BASE_URL;
 const API_KEY = process.env.BROKER_API_KEY;
+const DAILY_LOG_PATH = path.join(__dirname, '..', 'config', 'daily_profit_log.json');
 
 // Validasi awal saat bot dijalankan
 if (!API_BASE_URL || !API_KEY) {
@@ -25,6 +28,15 @@ const apiClient = axios.create({
     'Content-Type': 'application/json'
   }
 });
+
+async function readJsonFile(filePath) {
+  try {
+    const data = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(data);
+  } catch (err) {
+    return null;
+  }
+}
 
 /**
  * Fungsi internal untuk memvalidasi respons dari API broker.
@@ -190,20 +202,15 @@ async function getClosingDealInfo(positionId) {
 */
 async function getTodaysProfit() {
   log.info(`[BROKER HANDLER] Menghitung profit hari ini...`);
-  const toDate = new Date();
-  const fromDate = new Date();
-  fromDate.setHours(0, 0, 0, 0);
-
   try {
-      const response = await apiClient.get(`/history_deals_get?from_date=${fromDate.toISOString()}&to_date=${toDate.toISOString()}`);
-      const deals = response.data;
-      if (!deals || !Array.isArray(deals) || deals.length === 0) return 0;
-
-      const totalProfit = deals.reduce((sum, deal) => sum + deal.profit, 0);
-      return totalProfit;
+      const data = await readJsonFile(DAILY_LOG_PATH);
+      const today = new Date().toISOString().split('T')[0];
+      if (data && data[today]) {
+          return data[today].totalProfit || 0;
+      }
+      return 0;
   } catch (error) {
-      const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-      log.error(`[BROKER HANDLER] Gagal mengambil profit hari ini: ${errorMessage}`);
+      log.error(`[BROKER HANDLER] Gagal membaca log profit harian: ${error.message}`);
       return 0;
   }
 }
