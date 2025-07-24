@@ -3,56 +3,26 @@ const path = require('path');
 const { getLogger } = require('./logger');
 const log = getLogger('CircuitBreaker');
 
-const STATS_PATH = path.join(__dirname, '..', 'config', 'circuit_breaker_stats.json');
-const MAX_CONSECUTIVE_LOSSES = 3; // Anda bisa mengubah angka ini nanti
+const DAILY_LOG_PATH = path.join(__dirname, '..', 'config', 'daily_profit_log.json');
+const MAX_CONSECUTIVE_LOSSES = 3; // batas kerugian harian
 
-async function getStats() {
-    try {
-        const data = await fs.readFile(STATS_PATH, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        return { consecutiveLosses: 0, lastResetDate: new Date().toISOString().split('T')[0] };
-    }
+async function readJson(file){
+  try{
+    const data = await fs.readFile(file, 'utf8');
+    return JSON.parse(data);
+  }catch(err){
+    return null;
+  }
 }
 
-async function saveStats(stats) {
-    await fs.writeFile(STATS_PATH, JSON.stringify(stats, null, 2));
+async function isTripped(){
+  const today = new Date().toISOString().split('T')[0];
+  const data = await readJson(DAILY_LOG_PATH);
+  if(data && data[today] && data[today].losses >= MAX_CONSECUTIVE_LOSSES){
+    log.warn(`!!! CIRCUIT BREAKER AKTIF: mencapai ${data[today].losses} kerugian hari ini.`);
+    return true;
+  }
+  return false;
 }
 
-async function recordLoss() {
-    const stats = await getStats();
-    stats.consecutiveLosses += 1;
-    log.info(`Kerugian dicatat. Total kerugian beruntun: ${stats.consecutiveLosses}`);
-    await saveStats(stats);
-}
-
-async function recordWin() {
-    const stats = await getStats();
-    if (stats.consecutiveLosses > 0) {
-        log.info('Keuntungan dicatat. Kerugian beruntun direset ke 0.');
-        stats.consecutiveLosses = 0;
-        await saveStats(stats);
-    }
-}
-
-async function isTripped() {
-    const stats = await getStats();
-    const today = new Date().toISOString().split('T')[0];
-
-    if (stats.lastResetDate !== today) {
-        log.info('Hari baru, penghitung kerugian direset.');
-        stats.consecutiveLosses = 0;
-        stats.lastResetDate = today;
-        await saveStats(stats);
-        return false;
-    }
-
-    if (stats.consecutiveLosses >= MAX_CONSECUTIVE_LOSSES) {
-        log.warn(`!!! CIRCUIT BREAKER AKTIF: Mencapai ${stats.consecutiveLosses} kerugian beruntun.`);
-        return true;
-    }
-
-    return false;
-}
-
-module.exports = { isTripped, recordLoss, recordWin };
+module.exports = { isTripped };

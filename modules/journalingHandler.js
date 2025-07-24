@@ -12,8 +12,6 @@ const { getLogger } = require('./logger');
 const log = getLogger('Journaling');
 
 // --- MODUL INTERNAL ---
-// PERBAIKAN: Menambahkan impor yang hilang untuk circuitBreaker
-const circuitBreaker = require('./circuitBreaker');
 // Fallback untuk mengambil informasi deal jika data profit tidak tersedia
 const broker = require('./brokerHandler');
 
@@ -49,16 +47,7 @@ async function recordTrade(closedTradeData, closeReason, finalBrokerData = {}) {
 
     log.info(`[JOURNALING] Memulai proses pencatatan untuk tiket #${ticket}...`);
 
-    // --- LOGIKA UNTUK MELAPORKAN KE CIRCUIT BREAKER ---
-    const profitValue = parseFloat(profit);
-    if (!isNaN(profitValue)) { 
-        if (profitValue < 0) {
-            await circuitBreaker.recordLoss();
-        } else {
-            await circuitBreaker.recordWin();
-        }
-    }
-    // --- AKHIR DARI LOGIKA PELAPORAN ---
+
 
     try {
         const journalFilePath = path.join(JOURNAL_DIR, `journal_data_${symbol}.json`);
@@ -73,9 +62,19 @@ async function recordTrade(closedTradeData, closeReason, finalBrokerData = {}) {
             if (e.code !== 'ENOENT') log.error(`[JOURNALING] Error saat membaca file jurnal:`, e);
         }
 
+        let credentials;
+        try {
+            const raw = await fs.readFile(CREDENTIALS_PATH, 'utf8');
+            if (raw.includes('isi kredensial')) throw new Error('Placeholder');
+            credentials = JSON.parse(raw);
+        } catch (credErr) {
+            log.error('[JOURNALING] google-credentials.json belum dikonfigurasi dengan benar. Pencatatan ke Sheets dilewati.');
+            throw credErr;
+        }
+
         const serviceAccountAuth = new JWT({
-            email: require(CREDENTIALS_PATH).client_email,
-            key: require(CREDENTIALS_PATH).private_key,
+            email: credentials.client_email,
+            key: credentials.private_key,
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
 
